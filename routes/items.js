@@ -1,30 +1,64 @@
 const express = require('express');
 const router = express.Router();
+
+// Import Firebase database
 const db = require('../firebase');
 
-// GET all items
+/*
+  TEST ROUTE
+  URL: GET /items
+*/
 router.get('/', async (req, res) => {
   try {
-    const snapshot = await db.ref('items').once('value');
-    const items = snapshot.val() || {};
-    const itemList = Object.keys(items).map(key => ({ id: key, ...items[key] }));
-    res.json(itemList);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json({ message: 'Items route working successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
-// POST new item
+/*
+  ADD ITEM
+  URL: POST /items
+  BODY: { name, email }
+*/
 router.post('/', async (req, res) => {
   try {
-    const newItemRef = db.ref('items').push();
-    await newItemRef.set(req.body);
-    const savedItem = { id: newItemRef.key, ...req.body };
-    res.status(201).json(savedItem);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+    const { name, email } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({ error: 'Name and Email required' });
+    }
+
+    await db.collection('items').add({
+      name,
+      email,
+      createdAt: new Date()
+    });
+
+    res.status(201).json({ message: 'Item saved successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/*
+  GET ALL ITEMS
+  URL: GET /items/all
+*/
+router.get('/all', async (req, res) => {
+  try {
+    const snapshot = await db.collection('items').get();
+    const items = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
 module.exports = router;
+
 
